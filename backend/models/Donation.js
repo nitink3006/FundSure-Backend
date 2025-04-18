@@ -15,7 +15,7 @@ const DonationSchema = new mongoose.Schema({
   amount: {
     type: Number,
     required: [true, 'Please provide donation amount'],
-    min: [1, 'Donation amount must be at least $1'],
+    min: [1, 'Donation amount must be at least ₹1'],
   },
   status: {
     type: String,

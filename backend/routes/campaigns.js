@@ -2,7 +2,7 @@
 const express = require('express');
 const Campaign = require('../models/Campaign');
 const { protect } = require('../middleware/auth');
-const { upload, processImage } = require('../middleware/fileUpload');
+const { uploadMultiple, getFilePaths } = require('../middleware/fileUpload');
 
 const router = express.Router();
 
@@ -78,18 +78,25 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Create a campaign
-router.post('/', protect, upload.single('image'), async (req, res, next) => {
+router.post('/', protect, uploadMultiple, async (req, res, next) => {
   try {
     const { title, description, story, category, goalAmount, duration } = req.body;
 
-    // Handle image upload
-    let imageUrl = null;
-    if (req.file) {
-      imageUrl = await processImage(req.file);
-    } else {
+    // Extract file paths
+    const filePaths = getFilePaths(req.files);
+
+    // Ensure at least one image and one verification document is uploaded
+    if (!filePaths.images || filePaths.images.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Please upload a campaign image',
+        message: 'Please upload at least one campaign image',
+      });
+    }
+
+    if (!filePaths.verificationDocument || filePaths.verificationDocument.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a verification document',
       });
     }
 
@@ -105,9 +112,12 @@ router.post('/', protect, upload.single('image'), async (req, res, next) => {
       category,
       goalAmount,
       duration,
-      imageUrl,
+      imageUrl: filePaths.images[0], // assuming the first image is the cover image
       creator: req.user.id,
       endDate,
+      additionalImages: filePaths.images.slice(1), // save remaining images if needed
+      videos: filePaths.videos || [],
+      verificationDocuments: filePaths.verificationDocument,
     });
 
     res.status(201).json({

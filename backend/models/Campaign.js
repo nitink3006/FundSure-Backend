@@ -45,10 +45,21 @@ const CampaignSchema = new mongoose.Schema({
     required: [true, 'Please specify campaign duration in days'],
     min: [1, 'Duration must be at least 1 day'],
   },
-  imageUrl: {
-    type: String,
+  imageUrl: [
+    {type: String,
     required: [true, 'Please upload a campaign image'],
-  },
+  }
+],
+  videos:[
+    {
+      type: String,
+    }
+  ],
+  documents: [
+  {  type: String,
+    required: [true, 'Please upload a verification document'],
+  }
+  ],
   creator: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
