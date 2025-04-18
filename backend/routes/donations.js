@@ -142,6 +142,55 @@ router.get('/stats/summary', protect, async (req, res, next) => {
     next(error);
   }
 });
+router.post('/create-payment-intent', protect, async (req, res, next) => {
+  try {
+    const { campaignId, amount } = req.body;
+    
+    // Validate amount
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid donation amount',
+      });
+    }
+    
+    // Check if campaign exists and is active
+    const campaign = await Campaign.findById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({
+        success: false,
+        message: 'Campaign not found',
+      });
+    }
 
+    if (campaign.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        message: 'This campaign is not currently active',
+      });
+    }
+    
+    // Create a fake payment intent
+    const paymentIntent = await createPaymentIntent(amount, {
+      campaignId: campaign._id.toString(),
+      campaignTitle: campaign.title,
+      userId: req.user.id
+    });
+    
+    if (!paymentIntent.success) {
+      return res.status(400).json({
+        success: false,
+        message: paymentIntent.message || 'Failed to create payment intent',
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      clientSecret: paymentIntent.clientSecret,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = router;
