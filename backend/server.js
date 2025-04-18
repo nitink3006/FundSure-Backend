@@ -9,6 +9,8 @@ const campaignRoutes = require("./routes/campaigns");
 const donationRoutes = require("./routes/donations");
 const adminRoutes = require("./routes/admin");
 const seedAdminUser = require("./utils/seedAdmin");
+const userRoutes = require("./routes/user.js");
+
 
 // Load environment variables from .env
 dotenv.config();
@@ -60,6 +62,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/donations", donationRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/users", userRoutes);
+
 
 // ------------------------
 // Global Error Handler
