@@ -42,11 +42,11 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Initialize multer upload with fields and file limits
+// ⬆️ Increased file size limit to 100MB per file
 exports.uploadMultiple = multer({
   storage,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB per file
+    fileSize: 100 * 1024 * 1024, // 100MB per file
   },
   fileFilter,
 }).fields([
@@ -55,29 +55,25 @@ exports.uploadMultiple = multer({
   { name: 'verificationDocument', maxCount: 3 },
 ]);
 
-// Helper function to get file paths
+// ⬇️ Also support multiple verification documents in return object
 exports.getFilePaths = (filesObj) => {
   const result = {};
 
-  // Handle images
   if (filesObj.images) {
     result.images = filesObj.images.map(file => `/uploads/${file.filename}`);
   }
 
-  // Handle videos
   if (filesObj.videos) {
     result.videos = filesObj.videos.map(file => `/uploads/${file.filename}`);
   }
 
-  // Handle verification document (if present)
-  if (filesObj.verificationDocument && filesObj.verificationDocument.length > 0) {
-    result.verificationDocument = `/uploads/${filesObj.verificationDocument[0].filename}`;
+  if (filesObj.verificationDocument) {
+    result.verificationDocument = filesObj.verificationDocument.map(file => `/uploads/${file.filename}`);
   }
 
   return result;
 };
 
-// Process uploaded image and return its path
 exports.processImage = async (file) => {
   return `/uploads/${file.filename}`;
 };

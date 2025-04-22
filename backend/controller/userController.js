@@ -1,5 +1,5 @@
-const Donation = require('../models/Donation'); // Your donation model
-const Campaign = require('../models/Campaign'); // Your campaign model
+const Donation = require('../models/Donation');
+const Campaign = require('../models/Campaign');
 
 exports.getUserDashboard = async (req, res) => {
   try {
@@ -10,13 +10,23 @@ exports.getUserDashboard = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
-    // Fetch user campaigns
-    const userCampaigns = await Campaign.find({ createdBy: userId });
+    // Fetch all user campaigns with full details
+    const userCampaigns = await Campaign.find({ creator: userId });
 
-    // Example stats (can customize or expand later)
+    // Group campaigns by status
+    const activeCampaigns = userCampaigns.filter(campaign => campaign.status === 'active');
+    const pendingCampaigns = userCampaigns.filter(campaign => campaign.status === 'pending');
+    const completedCampaigns = userCampaigns.filter(campaign => campaign.status === 'completed');
+    const rejectedCampaigns = userCampaigns.filter(campaign => campaign.status === 'rejected');
+
+    // Calculate statistics
     const stats = {
       totalDonations: recentDonations.length,
       totalCampaigns: userCampaigns.length,
+      activeCampaigns: activeCampaigns.length,
+      pendingCampaigns: pendingCampaigns.length,
+      completedCampaigns: completedCampaigns.length,
+      rejectedCampaigns: rejectedCampaigns.length,
       totalRaised: userCampaigns.reduce((sum, campaign) => sum + (campaign.raisedAmount || 0), 0)
     };
 
@@ -24,7 +34,13 @@ exports.getUserDashboard = async (req, res) => {
       success: true,
       stats,
       recentDonations,
-      userCampaigns
+      campaigns: {
+        all: userCampaigns,
+        active: activeCampaigns,
+        pending: pendingCampaigns,
+        completed: completedCampaigns,
+        rejected: rejectedCampaigns
+      }
     });
 
   } catch (error) {
