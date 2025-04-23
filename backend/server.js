@@ -11,6 +11,7 @@ const adminRoutes = require("./routes/admin");
 const seedAdminUser = require("./utils/seedAdmin");
 const userRoutes = require("./routes/user.js");
 const uploadRoutes = require("./routes/upload.js")
+const path = require('path');
 
 
 // Load environment variables from .env
