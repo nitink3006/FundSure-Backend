@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const CampaignSchema = new mongoose.Schema({
@@ -27,8 +26,8 @@ const CampaignSchema = new mongoose.Schema({
       'Animal Welfare',
       'Disaster Relief',
       'Sports',
-      'Elderly Care', // New category for old people
-      'Child Welfare', // New category for children
+      'Elderly Care',
+      'Child Welfare',
     ],
   },
   goalAmount: {
@@ -45,20 +44,25 @@ const CampaignSchema = new mongoose.Schema({
     required: [true, 'Please specify campaign duration in days'],
     min: [1, 'Duration must be at least 1 day'],
   },
-  imageUrl: [
-    {type: String,
+  imageUrl: {
+    type: String,
     required: [true, 'Please upload a campaign image'],
-  }
-],
-  videos:[
+  },
+  additionalImages: [
     {
-      type: String,
+      type: String
     }
   ],
-  documents: [
-  {  type: String,
-    required: [true, 'Please upload a verification document'],
-  }
+  videos: [
+    {
+      type: String
+    }
+  ],
+  verificationDocuments: [
+    {
+      type: String,
+      required: [true, 'Please upload a verification document'],
+    }
   ],
   creator: {
     type: mongoose.Schema.Types.ObjectId,
