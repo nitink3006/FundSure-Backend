@@ -78,37 +78,33 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Create a campaign
-router.post('/', protect, async (req, res, next) => {
+router.post('/', protect, uploadMultiple, async (req, res, next) => {
   try {
-    const {
-      title,
-      description,
-      story,
-      category,
-      goalAmount,
-      duration,
-      images,
-      videos,
-      verificationDocument,
-    } = req.body;
+    const { title, description, story, category, goalAmount, duration } = req.body;
 
-    if (!images || images.length === 0) {
+    // Extract file paths
+    const filePaths = getFilePaths(req.files);
+
+    // Ensure at least one image and one verification document is uploaded
+    if (!filePaths.images || filePaths.images.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Please upload at least one campaign image',
       });
     }
 
-    if (!verificationDocument || verificationDocument.length === 0) {
+    if (!filePaths.verificationDocument || filePaths.verificationDocument.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Please upload a verification document',
       });
     }
 
+    // Calculate end date
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + parseInt(duration));
 
+    // Create campaign
     const campaign = await Campaign.create({
       title,
       description,
@@ -116,12 +112,12 @@ router.post('/', protect, async (req, res, next) => {
       category,
       goalAmount,
       duration,
-      imageUrl: images[0],
+      imageUrl: filePaths.images[0], // assuming the first image is the cover image
       creator: req.user.id,
       endDate,
-      additionalImages: images.slice(1),
-      videos: videos || [],
-      verificationDocuments: verificationDocument,
+      additionalImages: filePaths.images.slice(1), // save remaining images if needed
+      videos: filePaths.videos || [],
+      verificationDocuments: filePaths.verificationDocument,
     });
 
     res.status(201).json({
