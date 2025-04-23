@@ -14,6 +14,18 @@ router.use(authorize('admin'));
 // Get dashboard stats
 router.get('/dashboard', async (req, res, next) => {
   try {
+
+    const allCampaigns = await Campaign.find();
+
+    const groupedCampaigns = allCampaigns.reduce((acc, campaign) => {
+      const status = campaign.status || 'unknown'; 
+      if (!acc[status]) {
+        acc[status] = [];
+      }
+      acc[status].push(campaign);
+      return acc;
+    }, {});
+
     // Get total campaigns
     const totalCampaigns = await Campaign.countDocuments();
     
@@ -72,6 +84,7 @@ router.get('/dashboard', async (req, res, next) => {
       data: {
         totalCampaigns,
         pendingApprovals,
+        campaignsByStatus: groupedCampaigns,
         totalUsers,
         totalDonations,
         monthlyDonations: formattedMonthlyData,
