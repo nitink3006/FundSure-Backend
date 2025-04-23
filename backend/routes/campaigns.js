@@ -82,11 +82,8 @@ router.post('/', protect, uploadMultiple, async (req, res, next) => {
   try {
     const { title, description, story, category, goalAmount, duration } = req.body;
 
-    // Ensure req.files is at least an empty object
-    const uploadedFiles = req.files || {};
-
-    // Extract file paths safely
-    const filePaths = getFilePaths(uploadedFiles);
+    // Extract file paths
+    const filePaths = getFilePaths(req.files);
 
     // Ensure at least one image and one verification document is uploaded
     if (!filePaths.images || filePaths.images.length === 0) {
@@ -120,7 +117,7 @@ router.post('/', protect, uploadMultiple, async (req, res, next) => {
       endDate,
       additionalImages: filePaths.images.slice(1), // save remaining images if needed
       videos: filePaths.videos || [],
-      verificationDocument: filePaths.verificationDocument,
+      verificationDocuments: filePaths.verificationDocument,
     });
 
     res.status(201).json({
