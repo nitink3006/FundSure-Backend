@@ -115,7 +115,7 @@ router.post('/', protect, uploadMultiple, async (req, res, next) => {
       category,
       goalAmount,
       duration,
-      imagesUrl: filePaths.images[0], // assuming the first image is the cover image
+      imageUrl: filePaths.images[0], // assuming the first image is the cover image
       creator: req.user.id,
       endDate,
       additionalImages: filePaths.images.slice(1), // save remaining images if needed
