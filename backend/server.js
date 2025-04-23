@@ -10,6 +10,7 @@ const donationRoutes = require("./routes/donations");
 const adminRoutes = require("./routes/admin");
 const seedAdminUser = require("./utils/seedAdmin");
 const userRoutes = require("./routes/user.js");
+const uploadRoutes = require("./routes/upload.js")
 
 
 // Load environment variables from .env
@@ -58,11 +59,17 @@ mongoose
 // ------------------------
 // Routes
 // ------------------------
+
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/donations", donationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
+app.use('/api/uploads', uploadRoutes);
+
 
 
 // ------------------------
