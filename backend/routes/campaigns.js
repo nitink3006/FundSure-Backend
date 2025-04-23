@@ -82,29 +82,30 @@ router.post('/', protect, uploadMultiple, async (req, res, next) => {
   try {
     const { title, description, story, category, goalAmount, duration } = req.body;
 
-    // Extract file paths
-    const filePaths = getFilePaths(req.files);
+    // ✅ DEBUG: Optional
+    console.log('Received files:', req.files);
 
-    // Ensure at least one image and one verification document is uploaded
-    if (!filePaths.images || filePaths.images.length === 0) {
+    // ✅ SAFE: Handle missing or malformed file uploads
+    const filePaths = getFilePaths(req.files || {});
+
+    // Validate required files
+    if (!filePaths.images.length) {
       return res.status(400).json({
         success: false,
         message: 'Please upload at least one campaign image',
       });
     }
 
-    if (!filePaths.verificationDocument || filePaths.verificationDocument.length === 0) {
+    if (!filePaths.verificationDocument.length) {
       return res.status(400).json({
         success: false,
         message: 'Please upload a verification document',
       });
     }
 
-    // Calculate end date
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + parseInt(duration));
 
-    // Create campaign
     const campaign = await Campaign.create({
       title,
       description,
@@ -112,11 +113,11 @@ router.post('/', protect, uploadMultiple, async (req, res, next) => {
       category,
       goalAmount,
       duration,
-      imageUrl: filePaths.images[0], // assuming the first image is the cover image
+      imageUrl: filePaths.images[0],
+      additionalImages: filePaths.images.slice(1),
       creator: req.user.id,
       endDate,
-      additionalImages: filePaths.images.slice(1), // save remaining images if needed
-      videos: filePaths.videos || [],
+      videos: filePaths.videos,
       verificationDocuments: filePaths.verificationDocument,
     });
 
