@@ -115,10 +115,10 @@ router.post('/', protect, uploadMultiple, async (req, res, next) => {
       category,
       goalAmount,
       duration,
-      images: filePaths.images[0], // assuming the first image is the cover image
+      imagesUrl: filePaths.images[0], // assuming the first image is the cover image
       creator: req.user.id,
       endDate,
-      images: filePaths.images.slice(1), // save remaining images if needed
+      AdditionalImages: filePaths.images.slice(1), // save remaining images if needed
       videos: filePaths.videos || [],
       verificationDocument: filePaths.verificationDocument,
     });
