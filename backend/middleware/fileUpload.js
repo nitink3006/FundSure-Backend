@@ -14,17 +14,22 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
+    // Create unique filename
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   },
 });
 
-// File filter function
+// File filter function to validate file types
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
-    'image/jpeg', 'image/png', 'image/webp', 'image/jpg',
-    'video/mp4', 'video/mpeg',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/jpg',
+    'video/mp4',
+    'video/mpeg',
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -37,9 +42,12 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// ⬆️ Increased file size limit to 100MB per file
 exports.uploadMultiple = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB per file
+  },
   fileFilter,
 }).fields([
   { name: 'images', maxCount: 5 },
@@ -47,21 +55,23 @@ exports.uploadMultiple = multer({
   { name: 'verificationDocument', maxCount: 3 },
 ]);
 
-// ✅ SAFE: Prevent undefined `.map` errors
-exports.getFilePaths = (filesObj = {}) => {
-  return {
-    images: Array.isArray(filesObj.images)
-      ? filesObj.images.map(file => `/uploads/${file.filename}`)
-      : [],
+// ⬇️ Also support multiple verification documents in return object
+exports.getFilePaths = (filesObj) => {
+  const result = {};
 
-    videos: Array.isArray(filesObj.videos)
-      ? filesObj.videos.map(file => `/uploads/${file.filename}`)
-      : [],
+  if (filesObj.images) {
+    result.images = filesObj.images.map(file => `/uploads/${file.filename}`);
+  }
 
-    verificationDocument: Array.isArray(filesObj.verificationDocument)
-      ? filesObj.verificationDocument.map(file => `/uploads/${file.filename}`)
-      : [],
-  };
+  if (filesObj.videos) {
+    result.videos = filesObj.videos.map(file => `/uploads/${file.filename}`);
+  }
+
+  if (filesObj.verificationDocument) {
+    result.verificationDocument = filesObj.verificationDocument.map(file => `/uploads/${file.filename}`);
+  }
+
+  return result;
 };
 
 exports.processImage = async (file) => {
