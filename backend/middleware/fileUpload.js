@@ -1,52 +1,79 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../Cloudinary'); // adjust path as needed
+const path = require('path');
+const fs = require('fs');
 
-// Define allowed types
-const allowedFormats = [
-  'jpg', 'jpeg', 'png', 'webp', 'mp4', 'mpeg', 'pdf', 'doc', 'docx'
-];
+// Create uploads directory if it doesn't exist
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
-// Use cloud storage
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => {
-    const folder = 'uploads'; // Your cloudinary folder
-    const ext = file.mimetype.split('/')[1];
-    
-    return {
-      folder,
-      allowed_formats: allowedFormats,
-      public_id: file.fieldname + '-' + Date.now(),
-      resource_type: ext === 'mp4' || ext === 'mpeg' ? 'video' : 'auto'
-    };
+// Configure multer storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Create unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   },
 });
 
-const upload = multer({ storage });
+// File filter function to validate file types
+const fileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/jpg',
+    'video/mp4',
+    'video/mpeg',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
 
-// This supports multiple fields
-exports.uploadMultiple = upload.fields([
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Unsupported file type!'), false);
+  }
+};
+
+// ⬆️ Increased file size limit to 100MB per file
+exports.uploadMultiple = multer({
+  storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB per file
+  },
+  fileFilter,
+}).fields([
   { name: 'images', maxCount: 5 },
   { name: 'videos', maxCount: 2 },
   { name: 'verificationDocument', maxCount: 3 },
 ]);
 
-// Get URLs from cloudinary files
+// ⬇️ Also support multiple verification documents in return object
 exports.getFilePaths = (filesObj) => {
   const result = {};
 
   if (filesObj.images) {
-    result.images = filesObj.images.map(file => file.path); // Cloudinary URL
+    result.images = filesObj.images.map(file => `/uploads/${file.filename}`);
   }
 
   if (filesObj.videos) {
-    result.videos = filesObj.videos.map(file => file.path);
+    result.videos = filesObj.videos.map(file => `/uploads/${file.filename}`);
   }
 
   if (filesObj.verificationDocument) {
-    result.verificationDocument = filesObj.verificationDocument.map(file => file.path);
+    result.verificationDocument = filesObj.verificationDocument.map(file => `/uploads/${file.filename}`);
   }
 
   return result;
+};
+
+exports.processImage = async (file) => {
+  return `/uploads/${file.filename}`;
 };
