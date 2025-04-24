@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { uploadMultiple, getFilePaths } = require('../middleware/fileUpload'); // Keep this path adjusted
+const { uploadMultiple, getFilePaths } = require('../middleware/fileUpload'); // Adjust the path as needed
 
 // POST /api/uploads
 router.post('/', uploadMultiple, (req, res) => {
   try {
-    const filePaths = getFilePaths(req.files); // These are Cloudinary URLs now
+    const filePaths = getFilePaths(req.files);
     res.status(200).json({
       success: true,
       message: 'Files uploaded successfully',
@@ -16,7 +16,6 @@ router.post('/', uploadMultiple, (req, res) => {
     res.status(500).json({
       success: false,
       message: 'File upload failed',
-      error: err.message,
     });
   }
 });
