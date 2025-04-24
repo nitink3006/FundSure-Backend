@@ -3,6 +3,7 @@ const express = require('express');
 const Campaign = require('../models/Campaign');
 const { protect } = require('../middleware/auth');
 const { uploadMultiple, getFilePaths } = require('../middleware/fileUpload');
+const { uploadToCloudinary } = require('../middleware/fileUpload'); 
 
 const router = express.Router();
 
