@@ -78,55 +78,95 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Create a campaign
-router.post('/', protect, uploadMultiple, async (req, res, next) => {
-  try {
-    const { title, description, story, category, goalAmount, duration } = req.body;
-
-    // Extract file paths
-    const filePaths = getFilePaths(req.files);
-
-    // Ensure at least one image and one verification document is uploaded
-    if (!filePaths.images || filePaths.images.length === 0) {
+router.post('/', protect, (req, res, next) => {
+  // Use the multer middleware to handle file uploads
+  uploadMultiple(req, res, async (err) => {
+    if (err) {
       return res.status(400).json({
-        success: false,
-        message: 'Please upload at least one campaign image',
+        success: false, 
+        message: err.message || 'File upload failed'
       });
     }
+    
+    try {
+      const { title, description, story, category, goalAmount, duration } = req.body;
+      
+      // Process the files through Cloudinary
+      const filesObj = req.files;
+      const cloudinaryFiles = {};
+      
+      // Upload images to Cloudinary
+      if (filesObj.images && filesObj.images.length > 0) {
+        cloudinaryFiles.images = await Promise.all(
+          filesObj.images.map(file => uploadToCloudinary(file))
+        );
+      }
+      
+      // Upload videos to Cloudinary
+      if (filesObj.videos && filesObj.videos.length > 0) {
+        cloudinaryFiles.videos = await Promise.all(
+          filesObj.videos.map(file => uploadToCloudinary(file))
+        );
+      }
+      
+      // Upload verification documents to Cloudinary
+      if (filesObj.verificationDocument && filesObj.verificationDocument.length > 0) {
+        cloudinaryFiles.verificationDocument = await Promise.all(
+          filesObj.verificationDocument.map(file => uploadToCloudinary(file))
+        );
+      }
+      
+      // Ensure at least one image and one verification document is uploaded
+      if (!cloudinaryFiles.images || cloudinaryFiles.images.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please upload at least one campaign image',
+        });
+      }
 
-    if (!filePaths.verificationDocument || filePaths.verificationDocument.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please upload a verification document',
+      if (!cloudinaryFiles.verificationDocument || cloudinaryFiles.verificationDocument.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please upload a verification document',
+        });
+      }
+
+      // Calculate end date
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + parseInt(duration));
+
+      // Create campaign
+      const campaign = await Campaign.create({
+        title,
+        description,
+        story,
+        category,
+        goalAmount,
+        duration,
+        imageUrl: cloudinaryFiles.images[0].url, // Use the Cloudinary URL for the cover image
+        creator: req.user.id,
+        endDate,
+        additionalImages: cloudinaryFiles.images.slice(1).map(img => img.url), // Extract URLs for additional images
+        videos: cloudinaryFiles.videos ? cloudinaryFiles.videos.map(video => video.url) : [],
+        verificationDocuments: cloudinaryFiles.verificationDocument.map(doc => doc.url),
+        // Optionally store public IDs for future reference (e.g., for deletion)
+        cloudinaryData: {
+          coverImageId: cloudinaryFiles.images[0].publicId,
+          additionalImageIds: cloudinaryFiles.images.slice(1).map(img => img.publicId),
+          videoIds: cloudinaryFiles.videos ? cloudinaryFiles.videos.map(video => video.publicId) : [],
+          verificationDocumentIds: cloudinaryFiles.verificationDocument.map(doc => doc.publicId)
+        }
       });
+
+      res.status(201).json({
+        success: true,
+        data: campaign,
+      });
+    } catch (error) {
+      console.error('Campaign creation error:', error);
+      next(error);
     }
-
-    // Calculate end date
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + parseInt(duration));
-
-    // Create campaign
-    const campaign = await Campaign.create({
-      title,
-      description,
-      story,
-      category,
-      goalAmount,
-      duration,
-      imageUrl: filePaths.images[0], // assuming the first image is the cover image
-      creator: req.user.id,
-      endDate,
-      additionalImages: filePaths.images.slice(1), // save remaining images if needed
-      videos: filePaths.videos || [],
-      verificationDocuments: filePaths.verificationDocument,
-    });
-
-    res.status(201).json({
-      success: true,
-      data: campaign,
-    });
-  } catch (error) {
-    next(error);
-  }
+  });
 });
 
 // Add comment to campaign
