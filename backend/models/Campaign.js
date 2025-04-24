@@ -64,6 +64,12 @@ const CampaignSchema = new mongoose.Schema({
       required: [true, 'Please upload a verification document'],
     }
   ],
+  cloudinaryData: {
+    coverImageId: String,
+    additionalImageIds: [String],
+    videoIds: [String],
+    verificationDocumentIds: [String]
+  },
   creator: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
