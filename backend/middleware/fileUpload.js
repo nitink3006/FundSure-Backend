@@ -1,4 +1,3 @@
-// middleware/fileUpload.js
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -23,14 +22,13 @@ const storage = multer.diskStorage({
     cb(null, tempDir);
   },
   filename: function (req, file, cb) {
-    // Create unique filename
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   },
 });
 
-// File filter function to validate file types
+// File filter to validate file types
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
     'image/jpeg',
@@ -51,20 +49,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Multer middleware for handling file uploads
-exports.uploadMultiple = multer({
-  storage,
-  limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB per file
-  },
-  fileFilter,
-}).fields([
-  { name: 'images', maxCount: 5 },
-  { name: 'videos', maxCount: 2 },
-  { name: 'verificationDocument', maxCount: 3 },
-]);
-
-// Helper function to determine resource type and folder based on mime type
+// Helper: determine resource type and folder for Cloudinary
 const getUploadOptions = (mimetype) => {
   if (mimetype.startsWith('image/')) {
     return { 
@@ -73,7 +58,6 @@ const getUploadOptions = (mimetype) => {
       upload_preset: process.env.CLOUDINARY_IMAGE_PRESET
     };
   }
-  
   if (mimetype.startsWith('video/')) {
     return { 
       resource_type: 'video',
@@ -81,7 +65,6 @@ const getUploadOptions = (mimetype) => {
       upload_preset: process.env.CLOUDINARY_VIDEO_PRESET
     };
   }
-  
   return { 
     resource_type: 'raw',
     folder: 'documents',
@@ -89,12 +72,11 @@ const getUploadOptions = (mimetype) => {
   };
 };
 
-// Function to upload a single file to Cloudinary
+// Upload a single file to Cloudinary
 const uploadToCloudinary = async (file) => {
   const { resource_type, folder, upload_preset } = getUploadOptions(file.mimetype);
   
   try {
-    // Upload to Cloudinary
     const result = await cloudinary.uploader.upload(file.path, {
       resource_type,
       folder,
@@ -102,52 +84,46 @@ const uploadToCloudinary = async (file) => {
       use_filename: true,
       unique_filename: true
     });
-    
-    // Delete the temporary file
-    fs.unlinkSync(file.path);
-    
+
+    fs.unlinkSync(file.path); // Clean temp file
+
     return {
       url: result.secure_url,
       publicId: result.public_id,
       resourceType: resource_type
     };
   } catch (error) {
-    // Clean up the temp file if upload fails
     if (fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
+      fs.unlinkSync(file.path); // Clean up if upload fails
     }
     throw error;
   }
 };
 
-// Process uploads and send to Cloudinary
-exports.processUploads = async (req, res, next) => {
+// Process uploaded files through Cloudinary
+const processUploads = async (req, res, next) => {
   try {
     const filesObj = req.files;
     const result = {};
-    
-    // Process images
+
     if (filesObj.images && filesObj.images.length > 0) {
       result.images = await Promise.all(
         filesObj.images.map(file => uploadToCloudinary(file))
       );
     }
-    
-    // Process videos
+
     if (filesObj.videos && filesObj.videos.length > 0) {
       result.videos = await Promise.all(
         filesObj.videos.map(file => uploadToCloudinary(file))
       );
     }
-    
-    // Process verification documents
+
     if (filesObj.verificationDocument && filesObj.verificationDocument.length > 0) {
       result.verificationDocument = await Promise.all(
         filesObj.verificationDocument.map(file => uploadToCloudinary(file))
       );
     }
-    
-    // Add the Cloudinary results to the request object
+
     req.cloudinaryResults = result;
     next();
   } catch (error) {
@@ -156,7 +132,7 @@ exports.processUploads = async (req, res, next) => {
 };
 
 // Delete a file from Cloudinary
-exports.deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
   try {
     const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
     return result;
@@ -164,4 +140,22 @@ exports.deleteFromCloudinary = async (publicId, resourceType = 'image') => {
     console.error('Error deleting from Cloudinary:', error);
     throw error;
   }
+};
+
+// ✅ Export everything properly
+module.exports = {
+  uploadMultiple: multer({
+    storage,
+    limits: {
+      fileSize: 100 * 1024 * 1024,
+    },
+    fileFilter,
+  }).fields([
+    { name: 'images', maxCount: 5 },
+    { name: 'videos', maxCount: 2 },
+    { name: 'verificationDocument', maxCount: 3 },
+  ]),
+  uploadToCloudinary,
+  processUploads,
+  deleteFromCloudinary
 };
