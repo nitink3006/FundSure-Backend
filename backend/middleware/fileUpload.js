@@ -1,17 +1,26 @@
+// middleware/fileUpload.js
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
 
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Create temporary uploads directory if it doesn't exist
+const tempDir = path.join(__dirname, '../temp-uploads');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
 }
 
-// Configure multer storage
+// Configure multer storage for temporary files
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    cb(null, tempDir);
   },
   filename: function (req, file, cb) {
     // Create unique filename
@@ -42,7 +51,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// ⬆️ Increased file size limit to 100MB per file
+// Multer middleware for handling file uploads
 exports.uploadMultiple = multer({
   storage,
   limits: {
@@ -55,25 +64,104 @@ exports.uploadMultiple = multer({
   { name: 'verificationDocument', maxCount: 3 },
 ]);
 
-// ⬇️ Also support multiple verification documents in return object
-exports.getFilePaths = (filesObj) => {
-  const result = {};
-
-  if (filesObj.images) {
-    result.images = filesObj.images.map(file => `/uploads/${file.filename}`);
+// Helper function to determine resource type and folder based on mime type
+const getUploadOptions = (mimetype) => {
+  if (mimetype.startsWith('image/')) {
+    return { 
+      resource_type: 'image',
+      folder: 'images',
+      upload_preset: process.env.CLOUDINARY_IMAGE_PRESET
+    };
   }
-
-  if (filesObj.videos) {
-    result.videos = filesObj.videos.map(file => `/uploads/${file.filename}`);
+  
+  if (mimetype.startsWith('video/')) {
+    return { 
+      resource_type: 'video',
+      folder: 'videos',
+      upload_preset: process.env.CLOUDINARY_VIDEO_PRESET
+    };
   }
-
-  if (filesObj.verificationDocument) {
-    result.verificationDocument = filesObj.verificationDocument.map(file => `/uploads/${file.filename}`);
-  }
-
-  return result;
+  
+  return { 
+    resource_type: 'raw',
+    folder: 'documents',
+    upload_preset: process.env.CLOUDINARY_DOCUMENT_PRESET
+  };
 };
 
-exports.processImage = async (file) => {
-  return `/uploads/${file.filename}`;
+// Function to upload a single file to Cloudinary
+const uploadToCloudinary = async (file) => {
+  const { resource_type, folder, upload_preset } = getUploadOptions(file.mimetype);
+  
+  try {
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(file.path, {
+      resource_type,
+      folder,
+      upload_preset,
+      use_filename: true,
+      unique_filename: true
+    });
+    
+    // Delete the temporary file
+    fs.unlinkSync(file.path);
+    
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      resourceType: resource_type
+    };
+  } catch (error) {
+    // Clean up the temp file if upload fails
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    throw error;
+  }
+};
+
+// Process uploads and send to Cloudinary
+exports.processUploads = async (req, res, next) => {
+  try {
+    const filesObj = req.files;
+    const result = {};
+    
+    // Process images
+    if (filesObj.images && filesObj.images.length > 0) {
+      result.images = await Promise.all(
+        filesObj.images.map(file => uploadToCloudinary(file))
+      );
+    }
+    
+    // Process videos
+    if (filesObj.videos && filesObj.videos.length > 0) {
+      result.videos = await Promise.all(
+        filesObj.videos.map(file => uploadToCloudinary(file))
+      );
+    }
+    
+    // Process verification documents
+    if (filesObj.verificationDocument && filesObj.verificationDocument.length > 0) {
+      result.verificationDocument = await Promise.all(
+        filesObj.verificationDocument.map(file => uploadToCloudinary(file))
+      );
+    }
+    
+    // Add the Cloudinary results to the request object
+    req.cloudinaryResults = result;
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete a file from Cloudinary
+exports.deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    return result;
+  } catch (error) {
+    console.error('Error deleting from Cloudinary:', error);
+    throw error;
+  }
 };
