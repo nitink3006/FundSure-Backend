@@ -1,6 +1,6 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../config/cloudinary'); // adjust path as needed
+const cloudinary = require('../Cloudinary'); // adjust path as needed
 
 // Define allowed types
 const allowedFormats = [
