@@ -24,7 +24,7 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
-
+console.log("gemi", process.env.Gemini_API_KEY);
 const app = express();
 
 // ------------------------
