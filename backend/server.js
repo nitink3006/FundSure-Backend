@@ -13,6 +13,7 @@ const adminRoutes = require("./routes/admin");
 const seedAdminUser = require("./utils/seedAdmin");
 const userRoutes = require("./routes/user.js");
 const uploadRoutes = require("./routes/upload.js");
+const chatbotRoutes = require("./routes/chatbot.js");
 
 // Load environment variables from .env
 dotenv.config();
@@ -84,6 +85,7 @@ app.use("/api/donations", donationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
