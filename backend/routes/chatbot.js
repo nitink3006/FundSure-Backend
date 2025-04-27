@@ -108,10 +108,11 @@ router.post("/chatbot", async (req, res) => {
 
     return res.json({ response: text });
 
-  } catch (error) {
-    console.error("Error in chatbot route:", error);
-    return res.status(500).json({ error: "Internal server error" });
+  }catch (error) {
+    console.error("Full error:", error.stack);
+    return res.status(500).json({ error: "Internal server error", details: error.message });
   }
+  
 });
 
 module.exports = router;
