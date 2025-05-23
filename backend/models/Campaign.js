@@ -50,12 +50,12 @@ const CampaignSchema = new mongoose.Schema({
   },
   additionalImages: [
     {
-      type: String
+      type: String,
     }
   ],
   videos: [
     {
-      type: String
+      type: String,
     }
   ],
   verificationDocuments: [
@@ -83,6 +83,10 @@ const CampaignSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'active', 'completed', 'rejected'],
     default: 'pending',
+  },
+  isEmergency: {
+    type: Boolean,
+    default: false,
   },
   rejectionReason: {
     type: String,
@@ -120,7 +124,7 @@ const CampaignSchema = new mongoose.Schema({
   },
 });
 
-// Calculate days left
+// Virtual for calculating days left
 CampaignSchema.virtual('daysLeft').get(function () {
   const now = new Date();
   const end = new Date(this.endDate);
@@ -129,7 +133,7 @@ CampaignSchema.virtual('daysLeft').get(function () {
   return diffDays > 0 ? diffDays : 0;
 });
 
-// Set toJSON option to include virtuals
+// Enable virtuals in JSON and object output
 CampaignSchema.set('toJSON', { virtuals: true });
 CampaignSchema.set('toObject', { virtuals: true });
 
