@@ -130,33 +130,34 @@ router.get('/campaigns', async (req, res, next) => {
 });
 
 // Approve campaign
-router.put('/campaigns/:id/approve', async (req, res, next) => {
+router.put('/campaigns/:id/approve', async (req, res) => {
   try {
     const campaign = await Campaign.findById(req.params.id);
     
-    if (!campaign) {
-      return res.status(404).json({
-        success: false,
-        message: 'Campaign not found',
-      });
-    }
+  
+    const newEndDate = new Date();
+    newEndDate.setDate(newEndDate.getDate() + campaign.duration);
     
-    if (campaign.status !== 'pending') {
-      return res.status(400).json({
-        success: false,
-        message: 'Campaign is not pending approval',
-      });
-    }
-    
-    campaign.status = 'active';
-    await campaign.save();
-    
+ 
+    const updates = {
+      status: 'active',
+      isEmergency: req.body.isEmergency || false,
+      endDate: newEndDate
+    };
+
+    const approvedCampaign = await Campaign.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      { new: true, runValidators: true }
+    );
+
     res.status(200).json({
       success: true,
-      data: campaign,
+      data: approvedCampaign
     });
+    
   } catch (error) {
-    next(error);
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 
