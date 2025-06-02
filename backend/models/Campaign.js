@@ -28,8 +28,6 @@ const CampaignSchema = new mongoose.Schema({
       'Sports',
       'Elderly Care',
       'Child Welfare',
-      'Community',
-      'Arts',
     ],
   },
   goalAmount: {
@@ -70,8 +68,7 @@ const CampaignSchema = new mongoose.Schema({
     coverImageId: String,
     additionalImageIds: [String],
     videoIds: [String],
-    verificationDocumentIds: [String],
-    imageAnalysisResults: Object // Stores results from image processing
+    verificationDocumentIds: [String]
   },
   creator: {
     type: mongoose.Schema.Types.ObjectId,
@@ -98,6 +95,7 @@ const CampaignSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  // NEW: Fraud Analysis Data Storage
   fraudAnalysisData: {
     analyzedAt: {
       type: Date,
@@ -109,7 +107,7 @@ const CampaignSchema = new mongoose.Schema({
     },
     riskLevel: {
       type: String,
-      enum: ['Very Low', 'Low', 'Medium', 'High', 'Very High', 'Critical', 'Unknown'],
+      enum: ['Very Low', 'Low', 'Medium', 'High', 'Very High', 'Unknown'],
     },
     indicators: [
       {
@@ -123,7 +121,6 @@ const CampaignSchema = new mongoose.Schema({
         description: {
           type: String,
         },
-        imageEvidence: String // URL to image evidence if applicable
       }
     ],
     recommendation: {
@@ -147,10 +144,6 @@ const CampaignSchema = new mongoose.Schema({
       type: Boolean,
       default: false,
     },
-    imageAnalysis: {
-      type: Object,
-      default: null
-    }
   },
   updates: [
     {
@@ -160,7 +153,6 @@ const CampaignSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
       },
-      images: [String],
     },
   ],
   comments: [
@@ -174,7 +166,6 @@ const CampaignSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
       },
-      attachments: [String],
     },
   ],
   createdAt: {
@@ -200,37 +191,13 @@ CampaignSchema.virtual('fraudRisk').get(function () {
   return 'Not Analyzed';
 });
 
-// Virtual for image analysis summary
-CampaignSchema.virtual('imageAnalysisSummary').get(function () {
-  if (this.fraudAnalysisData && this.fraudAnalysisData.imageAnalysis) {
-    return {
-      riskScore: this.fraudAnalysisData.imageAnalysis.overallRiskScore,
-      indicators: this.fraudAnalysisData.imageAnalysis.imageIndicators
-    };
-  }
-  return null;
-});
+// Enable virtuals in JSON and object output
+CampaignSchema.set('toJSON', { virtuals: true });
+CampaignSchema.set('toObject', { virtuals: true });
 
-// Indexes for better performance
+// Index for better performance on fraud analysis queries
 CampaignSchema.index({ 'fraudAnalysisData.fraudScore': 1 });
 CampaignSchema.index({ 'fraudAnalysisData.riskLevel': 1 });
 CampaignSchema.index({ status: 1, 'fraudAnalysisData.fraudScore': 1 });
-CampaignSchema.index({ 'cloudinaryData.imageAnalysisResults': 1 });
-
-// Pre-save hook to process images
-CampaignSchema.pre('save', async function(next) {
-  if (this.isModified('imageUrl') || this.isModified('additionalImages')) {
-    try {
-      // This would be replaced with actual image processing logic
-      this.cloudinaryData.imageAnalysisResults = {
-        analyzedAt: new Date(),
-        status: 'Pending analysis'
-      };
-    } catch (error) {
-      console.error('Image processing error:', error);
-    }
-  }
-  next();
-});
 
 module.exports = mongoose.model('Campaign', CampaignSchema);
