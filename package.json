@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "cloudinary": "^2.6.1",
+    "dotenv": "^16.5.0",
+    "mongoose": "^8.15.1",
+    "sharp": "^0.34.2"
+  }
+}
