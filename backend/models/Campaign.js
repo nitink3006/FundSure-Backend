@@ -95,6 +95,56 @@ const CampaignSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  // NEW: Fraud Analysis Data Storage
+  fraudAnalysisData: {
+    analyzedAt: {
+      type: Date,
+    },
+    fraudScore: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+    riskLevel: {
+      type: String,
+      enum: ['Very Low', 'Low', 'Medium', 'High', 'Very High', 'Unknown'],
+    },
+    indicators: [
+      {
+        type: {
+          type: String,
+        },
+        severity: {
+          type: String,
+          enum: ['Low', 'Medium', 'High'],
+        },
+        description: {
+          type: String,
+        },
+      }
+    ],
+    recommendation: {
+      type: String,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    approvalNote: {
+      type: String,
+    },
+    rejectionNote: {
+      type: String,
+    },
+    manualReviewRequired: {
+      type: Boolean,
+      default: false,
+    },
+  },
   updates: [
     {
       title: String,
@@ -133,8 +183,21 @@ CampaignSchema.virtual('daysLeft').get(function () {
   return diffDays > 0 ? diffDays : 0;
 });
 
+// Virtual for getting fraud risk status
+CampaignSchema.virtual('fraudRisk').get(function () {
+  if (this.fraudAnalysisData && this.fraudAnalysisData.riskLevel) {
+    return this.fraudAnalysisData.riskLevel;
+  }
+  return 'Not Analyzed';
+});
+
 // Enable virtuals in JSON and object output
 CampaignSchema.set('toJSON', { virtuals: true });
 CampaignSchema.set('toObject', { virtuals: true });
+
+// Index for better performance on fraud analysis queries
+CampaignSchema.index({ 'fraudAnalysisData.fraudScore': 1 });
+CampaignSchema.index({ 'fraudAnalysisData.riskLevel': 1 });
+CampaignSchema.index({ status: 1, 'fraudAnalysisData.fraudScore': 1 });
 
 module.exports = mongoose.model('Campaign', CampaignSchema);
