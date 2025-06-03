@@ -1,16 +1,15 @@
-
 const express = require('express');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const { validateRegistration, validateLogin } = require('../middleware/validateUser');
 
 const router = express.Router();
 
 // Register user
-router.post('/register', async (req, res, next) => {
+router.post('/register', validateRegistration, async (req, res, next) => {
   try {
-    const { name, email, password, role,phone } = req.body;
+    const { name, email, password, role, phone } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -19,12 +18,11 @@ router.post('/register', async (req, res, next) => {
       });
     }
 
-    // Create user - allow role to be set during registration for demo purposes
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'user', // Default to user if not specified
+      role: role || 'user',
       phone,
     });
 
@@ -35,19 +33,10 @@ router.post('/register', async (req, res, next) => {
 });
 
 // Login user
-router.post('/login', async (req, res, next) => {
+router.post('/login', validateLogin, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Validate email & password
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide an email and password',
-      });
-    }
-
-    // Check for user
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({
@@ -56,7 +45,6 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
-    // Check if password matches
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
@@ -86,10 +74,7 @@ router.get('/me', protect, async (req, res, next) => {
 
 // Helper function to send token response
 const sendTokenResponse = (user, statusCode, res) => {
-  // Create token
   const token = user.getSignedJwtToken();
-
-  // Remove password from output
   user.password = undefined;
 
   res.status(statusCode).json({
